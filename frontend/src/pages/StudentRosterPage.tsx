@@ -6,7 +6,8 @@ import { StudentSearchFilter } from '../components/students/StudentSearchFilter'
 import { StudentRankingTable } from '../components/students/StudentRankingTable';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
-import { Users, Award, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { Users, Award, ShieldAlert, FileSpreadsheet, Upload } from 'lucide-react';
+import { UploadCsvModal } from '../components/uploads/UploadCsvModal';
 
 export const StudentRosterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,6 +23,7 @@ export const StudentRosterPage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [totalRosterCount, setTotalRosterCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
 
   // Sync query parameter if changed externally (e.g. from dashboard link)
   useEffect(() => {
@@ -31,21 +33,19 @@ export const StudentRosterPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setIsLoading(true);
-      try {
-        const data = await studentService.getStudents(filters);
-        setStudents(data);
-        if (totalRosterCount === 0) {
-          const all = await studentService.getStudents();
-          setTotalRosterCount(all.length);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchStudents = async () => {
+    setIsLoading(true);
+    try {
+      const data = await studentService.getStudents(filters);
+      setStudents(data);
+      const all = await studentService.getStudents();
+      setTotalRosterCount(all.length);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStudents();
   }, [filters]);
 
@@ -76,6 +76,17 @@ export const StudentRosterPage: React.FC = () => {
             Section CS-101 • Performance, attendance, engagement signals, and relative cohort standings
           </p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-colors cursor-pointer"
+          >
+            <Upload size={14} />
+            <span>Upload CSV Records</span>
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters Bar */}
@@ -99,6 +110,15 @@ export const StudentRosterPage: React.FC = () => {
       ) : (
         <StudentRankingTable students={students} />
       )}
+
+      {/* Batch CSV Ingestion Modal */}
+      <UploadCsvModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={() => {
+          fetchStudents();
+        }}
+      />
 
     </div>
   );

@@ -85,10 +85,33 @@ api_router.include_router(vision_router)
 app.include_router(api_router, prefix="/api")
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/", tags=["Root"])
-def root():
-    return {
-        "project": "ByteNight — Explainable Student Performance & Early Support System",
-        "docs": "/docs",
-        "health": "/api/health"
-    }
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Check for compiled frontend dist for unified production serving
+frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+if frontend_dist.exists() and (frontend_dist / "index.html").exists():
+    if (frontend_dist / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        # Do not intercept API, health, docs, or OpenAPI schema routes
+        if full_path.startswith(("api", "docs", "redoc", "openapi.json", "health")):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Endpoint not found")
+        file_path = frontend_dist / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
+else:
+    @app.get("/", tags=["Root"])
+    def root():
+        return {
+            "project": "ByteNight — Explainable Student Performance & Early Support System",
+            "docs": "/docs",
+            "health": "/api/health"
+        }
+

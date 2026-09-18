@@ -28,18 +28,18 @@ export const StudentProfilePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'attendance' | 'engagement' | 'explainability' | 'ranking' | 'history'>('overview');
 
-  useEffect(() => {
-    const fetchDetail = async () => {
-      if (!id) return;
-      setIsLoading(true);
-      try {
-        const result = await studentService.getStudentDetail(id);
-        setData(result);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchDetail = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const result = await studentService.getStudentDetail(id);
+      setData(result);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDetail();
   }, [id]);
 
@@ -82,7 +82,7 @@ export const StudentProfilePage: React.FC = () => {
     <div className="space-y-6">
       
       {/* 1. Student Header Card */}
-      <ProfileHeader student={student} />
+      <ProfileHeader student={student} onRefresh={fetchDetail} />
 
       {/* 2. Tab Navigation Bar */}
       <div className="border-b border-slate-200 flex items-center gap-1 overflow-x-auto pb-px">

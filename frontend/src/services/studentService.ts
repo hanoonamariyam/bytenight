@@ -184,6 +184,23 @@ class StudentService {
     const detail = await this.getStudentDetail(id);
     return detail ? detail.rankHistory : [];
   }
+
+  // Corresponds to POST /api/predictions
+  async evaluatePrediction(studentId: string): Promise<any> {
+    if (!USE_MOCK_API) {
+      try {
+        return await apiRequest('/predictions', {
+          method: 'POST',
+          body: JSON.stringify({ studentId }),
+        });
+      } catch (err) {
+        console.warn(`Live API error evaluating prediction for '${studentId}':`, err);
+        throw err;
+      }
+    }
+    await simulateLatency(400);
+    return { success: true, message: 'Prediction simulated in mock mode' };
+  }
 }
 
 export const studentService = new StudentService();

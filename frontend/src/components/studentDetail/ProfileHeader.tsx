@@ -4,14 +4,35 @@ import { Student } from '../../types/student.types';
 import { StatusBadge } from '../common/StatusBadge';
 import { RankChangeIndicator } from '../common/RankChangeIndicator';
 import { DataAvailabilityChip } from '../common/DataAvailabilityChip';
-import { ArrowLeft, Mail, Calendar, ShieldCheck, Award } from 'lucide-react';
+import { ArrowLeft, Mail, Calendar, ShieldCheck, Award, Sparkles, RefreshCw, CheckCircle } from 'lucide-react';
+import { studentService } from '../../services/studentService';
 
 interface ProfileHeaderProps {
   student: Student;
+  onRefresh?: () => Promise<void>;
 }
 
-export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student }) => {
+export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, onRefresh }) => {
   const isVisionOffline = student.dataAvailability.vision === 'DATA_UNAVAILABLE';
+  const [isEvaluating, setIsEvaluating] = React.useState(false);
+  const [evalSuccess, setEvalSuccess] = React.useState(false);
+
+  const handleEvaluate = async () => {
+    setIsEvaluating(true);
+    setEvalSuccess(false);
+    try {
+      await studentService.evaluatePrediction(student.id);
+      setEvalSuccess(true);
+      if (onRefresh) {
+        await onRefresh();
+      }
+      setTimeout(() => setEvalSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to evaluate model:', err);
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-6 mb-6">
@@ -116,6 +137,30 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student }) => {
             }`}>
               {(student.riskScore * 100).toFixed(0)}%
             </span>
+          </div>
+
+          {/* Evaluate Model Action Button */}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={handleEvaluate}
+              disabled={isEvaluating}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                evalSuccess
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              } ${isEvaluating ? 'opacity-75 cursor-not-allowed' : ''}`}
+              title="Run live multi-signal ML risk evaluation and SHAP attribution"
+            >
+              {isEvaluating ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : evalSuccess ? (
+                <CheckCircle size={13} />
+              ) : (
+                <Sparkles size={13} />
+              )}
+              <span>{isEvaluating ? 'Evaluating...' : evalSuccess ? 'Evaluated' : 'Evaluate Model'}</span>
+            </button>
           </div>
 
         </div>

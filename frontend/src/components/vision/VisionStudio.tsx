@@ -12,8 +12,10 @@ import {
   Film,
   ArrowRight,
   RefreshCw,
-  Eye
+  Eye,
+  UserCheck
 } from 'lucide-react';
+import { visionService, VisionAnalyzeResponse } from '../../services/visionService';
 
 const SUPPORTED_EXTENSIONS = ['.mp4', '.mov', '.webm', '.avi'];
 const SUPPORTED_MIME_TYPES = [
@@ -34,7 +36,8 @@ export const VisionStudio: React.FC = () => {
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
-  const [analysisStatus, setAnalysisStatus] = useState<'IDLE' | 'STAGED'>('IDLE');
+  const [analysisStatus, setAnalysisStatus] = useState<'IDLE' | 'ANALYZING' | 'COMPLETED'>('IDLE');
+  const [analysisResult, setAnalysisResult] = useState<VisionAnalyzeResponse | null>(null);
 
   // Clean up object URL when component unmounts or previewUrl changes
   useEffect(() => {
@@ -124,6 +127,7 @@ export const VisionStudio: React.FC = () => {
     setVideoDuration(null);
     setVideoDimensions(null);
     setAnalysisStatus('IDLE');
+    setAnalysisResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -157,9 +161,18 @@ export const VisionStudio: React.FC = () => {
     }
   };
 
-  const handleAnalyzeVideo = () => {
+  const handleAnalyzeVideo = async () => {
     if (!selectedFile) return;
-    setAnalysisStatus('STAGED');
+    setAnalysisStatus('ANALYZING');
+    setErrorMessage(null);
+    try {
+      const res = await visionService.analyzeVideo(selectedFile);
+      setAnalysisResult(res);
+      setAnalysisStatus('COMPLETED');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Video analysis failed.');
+      setAnalysisStatus('IDLE');
+    }
   };
 
   return (
@@ -226,16 +239,25 @@ export const VisionStudio: React.FC = () => {
 
           <button
             type="button"
-            disabled={!selectedFile}
+            disabled={!selectedFile || analysisStatus === 'ANALYZING'}
             onClick={handleAnalyzeVideo}
             className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              selectedFile
+              selectedFile && analysisStatus !== 'ANALYZING'
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
             }`}
           >
-            <Sparkles size={15} />
-            <span>Analyze Video</span>
+            {analysisStatus === 'ANALYZING' ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Analyzing Pose &amp; Telemetry...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={15} />
+                <span>Analyze Video</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -253,22 +275,32 @@ export const VisionStudio: React.FC = () => {
         </div>
       )}
 
-      {/* Video Staged Confirmation Banner */}
-      {analysisStatus === 'STAGED' && selectedFile && (
+      {/* Video Analyzing Banner */}
+      {analysisStatus === 'ANALYZING' && (
+        <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex items-start gap-3 text-xs text-indigo-900 shadow-2xs">
+          <RefreshCw size={18} className="text-indigo-600 shrink-0 mt-0.5 animate-spin" />
+          <div>
+            <h4 className="font-bold text-sm text-indigo-950">
+              Running Pose &amp; Attention Telemetry Ingestion...
+            </h4>
+            <p className="text-indigo-800 mt-0.5">
+              Extracting joint coordinates and upper-body orientation vectors via MediaPipe / OpenCV optical model.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Video Completed Confirmation Banner */}
+      {analysisStatus === 'COMPLETED' && analysisResult && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-xs text-emerald-900 shadow-2xs">
           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <h4 className="font-bold text-sm text-emerald-950">
-              Video File Staged &amp; Verified for Analysis
+              Video Telemetry Extraction Complete (ID: {analysisResult.video_id})
             </h4>
             <p className="text-emerald-800 leading-relaxed">
-              Selected file <strong className="font-mono text-emerald-900">{selectedFile.name}</strong> ({formatFileSize(selectedFile.size)}) is verified and held in memory. The File object is ready for dispatch to the FastAPI backend endpoint <span className="font-mono font-semibold">POST /api/v1/vision/analyze</span> during the AI/ML integration phase.
+              Successfully processed <strong className="font-mono text-emerald-900">{selectedFile?.name}</strong> in {analysisResult.analysis_duration}. Optical confidence is {(analysisResult.confidence * 100).toFixed(0)}% with {analysisResult.students_detected} student zones tracked.
             </p>
-            <div className="pt-1 flex items-center gap-3 text-[11px] text-emerald-700 font-medium">
-              <span>MIME: {selectedFile.type || 'video/mp4'}</span>
-              <span>•</span>
-              <span>Last Modified: {new Date(selectedFile.lastModified).toLocaleDateString()}</span>
-            </div>
           </div>
         </div>
       )}
@@ -475,16 +507,25 @@ export const VisionStudio: React.FC = () => {
             <div className="mt-4 pt-3 border-t border-slate-100">
               <button
                 type="button"
-                disabled={!selectedFile}
+                disabled={!selectedFile || analysisStatus === 'ANALYZING'}
                 onClick={handleAnalyzeVideo}
                 className={`w-full py-2.5 px-4 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  selectedFile
+                  selectedFile && analysisStatus !== 'ANALYZING'
                     ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 }`}
               >
-                <Sparkles size={14} />
-                <span>{analysisStatus === 'STAGED' ? 'Analyze Video (Staged)' : 'Analyze Video'}</span>
+                {analysisStatus === 'ANALYZING' ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Analyzing Pose Vectors...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} />
+                    <span>{analysisStatus === 'COMPLETED' ? 'Re-Analyze Video' : 'Analyze Video'}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -503,6 +544,97 @@ export const VisionStudio: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Live Optical Telemetry Analysis Results Display */}
+      {analysisResult && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xs space-y-6 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-indigo-50 text-indigo-700 rounded-lg">
+                <UserCheck size={18} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Optical Behavior Telemetry Results
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Anonymous zone-level pose estimation • Frame processing time: {analysisResult.analysis_duration}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                Confidence: {(analysisResult.confidence * 100).toFixed(0)}%
+              </span>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                Quality: {analysisResult.data_quality}
+              </span>
+            </div>
+          </div>
+
+          {/* Aggregate Telemetry Breakdown */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 text-center">
+              <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">Attentive</span>
+              <span className="text-xl font-bold text-emerald-900 mt-1 block">{analysisResult.behaviour_summary.attentive}</span>
+            </div>
+            <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-center">
+              <span className="text-[11px] font-semibold text-blue-800 uppercase tracking-wider block">Talking</span>
+              <span className="text-xl font-bold text-blue-900 mt-1 block">{analysisResult.behaviour_summary.talking}</span>
+            </div>
+            <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 text-center">
+              <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">Phone Usage</span>
+              <span className="text-xl font-bold text-amber-900 mt-1 block">{analysisResult.behaviour_summary.phone_usage}</span>
+            </div>
+            <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3 text-center">
+              <span className="text-[11px] font-semibold text-rose-800 uppercase tracking-wider block">Sleeping</span>
+              <span className="text-xl font-bold text-rose-900 mt-1 block">{analysisResult.behaviour_summary.sleeping}</span>
+            </div>
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 text-center">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">Occluded / Unknown</span>
+              <span className="text-xl font-bold text-slate-800 mt-1 block">{analysisResult.behaviour_summary.unknown}</span>
+            </div>
+          </div>
+
+          {/* Detections Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Seating Zone / Desk</th>
+                  <th className="py-2.5 px-3">Anonymous Identifier</th>
+                  <th className="py-2.5 px-3">Classified Telemetry</th>
+                  <th className="py-2.5 px-3">Confidence</th>
+                  <th className="py-2.5 px-3">Optical Indicators</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {analysisResult.students.map((st, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/60">
+                    <td className="py-2.5 px-3 font-semibold text-slate-800">{st.desk_label || `Zone ${idx + 1}`}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-500">{st.student_id}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`px-2 py-0.5 rounded font-semibold text-[11px] ${
+                        st.behaviour === 'ATTENTIVE' ? 'bg-emerald-100 text-emerald-800' :
+                        st.behaviour === 'TALKING' ? 'bg-blue-100 text-blue-800' :
+                        st.behaviour === 'PHONE_USAGE' ? 'bg-amber-100 text-amber-800' :
+                        st.behaviour === 'SLEEPING' ? 'bg-rose-100 text-rose-800' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>
+                        {st.behaviour}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-700">{(st.confidence * 100).toFixed(0)}%</td>
+                    <td className="py-2.5 px-3 text-slate-600">
+                      {st.indicators.length > 0 ? st.indicators.join('; ') : 'Normal active pose'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
     </div>
   );
