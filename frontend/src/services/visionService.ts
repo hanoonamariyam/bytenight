@@ -1,4 +1,4 @@
-import { simulateLatency } from './api';
+import { apiRequest, simulateLatency, USE_MOCK_API } from './api';
 
 export interface VisionSessionData {
   classroomId: string;
@@ -22,8 +22,16 @@ export interface VisionSessionData {
 }
 
 class VisionService {
-  // Corresponds to GET /api/v1/vision/status
+  // Corresponds to GET /api/vision/status
   async getVisionStatus(): Promise<VisionSessionData> {
+    if (!USE_MOCK_API) {
+      try {
+        return await apiRequest<VisionSessionData>('/vision/status');
+      } catch (err) {
+        console.warn('Live API error fetching vision status, falling back to mock:', err);
+      }
+    }
+
     await simulateLatency(250);
 
     return {

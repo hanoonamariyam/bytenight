@@ -38,3 +38,17 @@ frontend/dist/
 frontend/node_modules/
 .tmp/
 tsconfig.tsbuildinfo
+
+# Python & Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+backend/data/*.db
+backend/uploads/videos/*
+backend/uploads/academic/*
+backend/uploads/attendance/*
+!backend/uploads/.gitkeep
+backend/processed/*
+

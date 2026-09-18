@@ -1,10 +1,18 @@
 import { DashboardSummary } from '../types/student.types';
 import { MOCK_STUDENTS, MOCK_ALERTS } from '../data/mockData';
-import { simulateLatency } from './api';
+import { apiRequest, simulateLatency, USE_MOCK_API } from './api';
 
 class DashboardService {
-  // Corresponds to GET /api/v1/dashboard/summary
+  // Corresponds to GET /api/dashboard/summary
   async getDashboardSummary(): Promise<DashboardSummary> {
+    if (!USE_MOCK_API) {
+      try {
+        return await apiRequest<DashboardSummary>('/dashboard/summary');
+      } catch (err) {
+        console.warn('Live API error for dashboard summary, falling back to mock:', err);
+      }
+    }
+
     await simulateLatency(300);
 
     const totalStudents = MOCK_STUDENTS.length;

@@ -1,6 +1,6 @@
 import { User } from '../types/student.types';
 import { MOCK_FACULTY_USER } from '../data/mockData';
-import { simulateLatency } from './api';
+import { apiRequest, simulateLatency, USE_MOCK_API } from './api';
 
 export interface LoginCredentials {
   email: string;
@@ -30,17 +30,32 @@ class AuthService {
     }
   }
 
-  // Corresponds to POST /api/v1/auth/login
+  // Corresponds to POST /api/auth/login
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    await simulateLatency(400);
+    if (!USE_MOCK_API) {
+      try {
+        const response = await apiRequest<AuthResponse>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(credentials),
+        });
+        this.saveSession(response.user, response.token);
+        return response;
+      } catch (err: any) {
+        console.warn('Live API auth error, attempting fallback...', err?.message);
+        // If live API returns explicit invalid credential error, throw it directly
+        if (err?.message && err.message.includes('Invalid email or password')) {
+          throw err;
+        }
+      }
+    }
 
+    await simulateLatency(300);
     const { email, password } = credentials;
 
     // Faculty demo credentials check
     if (email === 'prof.smith@university.edu' && password === 'Password123!') {
       const user = MOCK_FACULTY_USER;
       const token = 'mock_jwt_faculty_token_sarah_smith_2026';
-      
       this.saveSession(user, token);
       return { user, token };
     }
@@ -63,9 +78,20 @@ class AuthService {
     throw new Error('Invalid email or password. Use demo credentials shown below.');
   }
 
-  // Corresponds to GET /api/v1/auth/me
+  // Corresponds to GET /api/auth/me
   async getCurrentUser(): Promise<User | null> {
-    await simulateLatency(150);
+    if (!USE_MOCK_API && this.token) {
+      try {
+        const user = await apiRequest<User>('/auth/me');
+        this.currentUser = user;
+        localStorage.setItem('bytenight_user', JSON.stringify(user));
+        return user;
+      } catch {
+        // Fallback to locally saved user
+      }
+    }
+
+    await simulateLatency(100);
     return this.currentUser;
   }
 
