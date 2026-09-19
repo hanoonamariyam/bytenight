@@ -24,7 +24,7 @@ def seed_database():
         faculty = User(
             id="usr_sarah_smith",
             email="prof.smith@university.edu",
-            hashed_password=hash_password("Password123!"),
+            hashed_password=hash_password("Password123"),
             full_name="Dr. Sarah Smith",
             role="FACULTY",
             department="Computer Science & Engineering",

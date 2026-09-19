@@ -23,7 +23,7 @@ def test_health_endpoint(client):
 def test_auth_login_and_me(client):
     login_res = client.post("/api/auth/login", json={
         "email": "prof.smith@university.edu",
-        "password": "Password123!"
+        "password": "Password123"
     })
     assert login_res.status_code == 200
     auth_data = login_res.json()

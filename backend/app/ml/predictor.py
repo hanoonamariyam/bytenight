@@ -9,7 +9,7 @@ THRESHOLD_YELLOW_MAX = 0.70
 def predict_student_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     """
     Executes prediction on engineered feature dictionary.
-    Uses loaded XGBoost model if available; otherwise applies deterministic multi-signal baseline.
+    Uses the loaded tree model if available; otherwise applies deterministic multi-signal baseline.
     """
     academic_mean = features.get("academic_score_mean", 75.0)
     academic_delta = features.get("academic_score_delta", 0.0)
@@ -64,7 +64,7 @@ def predict_student_risk(features: Dict[str, Any]) -> Dict[str, Any]:
                 risk_score = 0.85 if predicted_status == "RED" else 0.55 if predicted_status == "YELLOW" else 0.15
                 confidence = 0.88
 
-            model_version = "xgboost_student_support_trained"
+            model_version = "lightgbm_student_support_trained"
             return {
                 "predicted_status": predicted_status,
                 "risk_score": round(min(1.0, max(0.0, risk_score)), 3),

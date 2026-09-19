@@ -1,4 +1,4 @@
-"""Train the student-support XGBoost model from the existing SQLite records.
+"""Train the student-support LightGBM model from the existing SQLite records.
 
 This module never creates synthetic records. Labels are the existing student
 support statuses, and features are produced by the shared feature engineer.
@@ -74,12 +74,12 @@ def build_training_data(db) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(rows, dtype=np.float32), np.asarray(labels, dtype=np.int64)
 
 
-def train_xgboost_model() -> Dict[str, Any]:
+def train_lightgbm_model() -> Dict[str, Any]:
     try:
-        from xgboost import XGBClassifier
+        from lightgbm import LGBMClassifier
     except ImportError as exc:
         raise RuntimeError(
-            "XGBoost is required to train the model. Install backend requirements first."
+            "LightGBM is required to train the model. Install backend requirements first."
         ) from exc
     try:
         from sklearn.model_selection import StratifiedKFold, cross_val_score
@@ -102,8 +102,8 @@ def train_xgboost_model() -> Dict[str, Any]:
             f"counts={class_counts.tolist()}"
         )
 
-    model = XGBClassifier(
-        objective="multi:softprob",
+    model = LGBMClassifier(
+        objective="multiclass",
         num_class=3,
         n_estimators=80,
         max_depth=3,
@@ -112,7 +112,7 @@ def train_xgboost_model() -> Dict[str, Any]:
         colsample_bytree=0.9,
         reg_lambda=1.0,
         random_state=42,
-        eval_metric="mlogloss",
+        verbosity=-1,
         n_jobs=1,
     )
     folds = min(3, int(np.min(class_counts)))
@@ -120,7 +120,7 @@ def train_xgboost_model() -> Dict[str, Any]:
     accuracy_scores = cross_val_score(model, X, y, cv=validation, scoring="accuracy")
     model.fit(X, y)
 
-    settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    settings.MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, settings.MODEL_PATH)
     joblib.dump(FEATURE_NAMES, settings.FEATURES_PATH)
 
@@ -137,14 +137,19 @@ def train_xgboost_model() -> Dict[str, Any]:
         "model_path": str(settings.MODEL_PATH),
         "features_path": str(settings.FEATURES_PATH),
     }
-    logger.info("XGBoost training complete: %s", json.dumps(metrics, sort_keys=True))
+    logger.info("LightGBM training complete: %s", json.dumps(metrics, sort_keys=True))
     return metrics
+
+
+def train_xgboost_model() -> Dict[str, Any]:
+    """Backward-compatible entry point for existing scripts and integrations."""
+    return train_lightgbm_model()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
-    print(json.dumps(train_xgboost_model(), indent=2, sort_keys=True))
+    print(json.dumps(train_lightgbm_model(), indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

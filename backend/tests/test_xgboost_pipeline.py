@@ -6,16 +6,16 @@ from app.ml import model_loader
 from app.ml.feature_engineering import engineer_features_for_student
 from app.ml.explanation import explain_prediction
 from app.ml.predictor import predict_student_risk
-from app.ml.train_xgboost import train_xgboost_model
+from app.ml.train_xgboost import train_lightgbm_model
 from app.models.db_models import AcademicRecord, AttendanceRecord, EngagementRecord, Student
 
 
-def test_xgboost_training_and_prediction_pipeline():
-    pytest.importorskip("xgboost")
+def test_lightgbm_training_and_prediction_pipeline():
+    pytest.importorskip("lightgbm")
     pytest.importorskip("shap")
     pytest.importorskip("sklearn")
 
-    metrics = train_xgboost_model()
+    metrics = train_lightgbm_model()
     assert metrics["samples"] >= 3
     assert set(metrics["class_counts"]) == {"GREEN", "YELLOW", "RED"}
     assert settings.MODEL_PATH.exists()
@@ -43,7 +43,7 @@ def test_xgboost_training_and_prediction_pipeline():
         db.close()
 
     prediction = predict_student_risk(features)
-    assert prediction["model_version"] == "xgboost_student_support_trained"
+    assert prediction["model_version"] == "lightgbm_student_support_trained"
     assert prediction["predicted_status"] in {"GREEN", "YELLOW", "RED"}
 
     factors = explain_prediction(

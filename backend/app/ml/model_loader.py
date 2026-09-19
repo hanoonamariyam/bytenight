@@ -28,7 +28,7 @@ class ModelLoader:
         self._initialized = True
 
     def reload(self) -> bool:
-        """Attempt to load student_support_xgb_model.pkl and student_support_features.pkl."""
+        """Attempt to load the trained model and its feature schema."""
         model_path = settings.MODEL_PATH
         features_path = settings.FEATURES_PATH
 
@@ -47,7 +47,7 @@ class ModelLoader:
             return False
 
         try:
-            logger.info(f"Loading trained XGBoost model from {model_path}...")
+            logger.info(f"Loading trained student-support model from {model_path}...")
             self.model = joblib.load(model_path)
             
             logger.info(f"Loading feature schema from {features_path}...")

@@ -43,7 +43,7 @@ class Settings:
     ]
     
     # Model Artifact Paths
-    MODEL_PATH: Path = MODELS_DIR / "student_support_xgb_model.pkl"
+    MODEL_PATH: Path = MODELS_DIR / "student_support_model.pkl"
     FEATURES_PATH: Path = MODELS_DIR / "student_support_features.pkl"
     
     # Vision Settings

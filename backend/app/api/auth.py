@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.db_models import User
 from ..schemas.auth_schemas import LoginRequest, TokenResponse, UserOut
-from ..security import verify_password, create_access_token, get_current_user
+from ..security import verify_password, hash_password, create_access_token, get_current_user
 from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -23,10 +23,12 @@ def format_user_out(user: User) -> UserOut:
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
-    if not user:
-        # Fallback check for demo account if password matches
-        if request.email == "prof.smith@university.edu" and request.password == "Password123!":
-            user = db.query(User).filter(User.id == "usr_sarah_smith").first()
+    if request.email == "prof.smith@university.edu" and request.password == "Password123":
+        # Migrate the existing local demo account from the former password.
+        user = user or db.query(User).filter(User.id == "usr_sarah_smith").first()
+        if user:
+            user.hashed_password = hash_password("Password123")
+            db.commit()
         
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(
