@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AlertProvider } from './context/AlertContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { ThemeToggle } from './components/common/ThemeToggle';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
     <AuthProvider>
       <AlertProvider>
         <BrowserRouter>
+          <ThemeToggle />
           <Routes>
             {/* Public Authentication Route */}
             <Route path="/login" element={<LoginPage />} />

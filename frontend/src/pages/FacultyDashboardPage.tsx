@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboardService } from '../services/dashboardService';
+import { STUDENT_DATA_UPDATED_EVENT } from '../services/uploadService';
 import { DashboardSummary } from '../types/student.types';
 import { KpiCard } from '../components/dashboard/KpiCard';
 import { UrgentAttentionTable } from '../components/dashboard/UrgentAttentionTable';
@@ -36,6 +37,9 @@ export const FacultyDashboardPage: React.FC = () => {
       }
     };
     loadSummary();
+
+    window.addEventListener(STUDENT_DATA_UPDATED_EVENT, loadSummary);
+    return () => window.removeEventListener(STUDENT_DATA_UPDATED_EVENT, loadSummary);
   }, []);
 
   if (isLoading || !summary) {

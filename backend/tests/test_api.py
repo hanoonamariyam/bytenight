@@ -36,6 +36,19 @@ def test_auth_login_and_me(client):
     assert me_res.status_code == 200
     assert me_res.json()["id"] == "usr_sarah_smith"
 
+def test_auth_rejects_invalid_format_and_unknown_credentials(client):
+    invalid_format = client.post("/api/auth/login", json={
+        "email": "not-an-email",
+        "password": "Password123"
+    })
+    assert invalid_format.status_code == 422
+
+    unknown_user = client.post("/api/auth/login", json={
+        "email": "unknown@university.edu",
+        "password": "Password123"
+    })
+    assert unknown_user.status_code == 401
+
 def test_dashboard_summary(client):
     res = client.get("/api/dashboard/summary")
     assert res.status_code == 200
@@ -137,13 +150,33 @@ def test_attendance_and_academic_uploads(client):
     assert res_att.json()["acceptedRows"] == 2
 
     # CSV academic upload
-    acad_csv = "student_code,subject,assessment_type,assessment_date,score,max_score\nST014,Data Structures,Quiz 3,2026-09-21,75,100\n"
+    acad_csv = "student_code,name,subject,assessment_type,assessment_date,score,max_score\nST014,Jane Uploaded,Data Structures,Quiz 3,2026-09-21,75,100\nST900,New CSV Student,Data Structures,Final Exam,2026-09-21,99,100\n"
     res_acad = client.post(
         "/api/academic/upload",
         files={"file": ("grades.csv", acad_csv.encode("utf-8"), "text/csv")}
     )
     assert res_acad.status_code == 200
-    assert res_acad.json()["acceptedRows"] == 1
+    assert res_acad.json()["acceptedRows"] == 2
+
+    updated_dashboard = client.get("/api/dashboard/summary")
+    assert updated_dashboard.status_code == 200
+    updated_student = next(
+        student for student in updated_dashboard.json()["urgentStudents"]
+        if student["studentCode"] == "ST014"
+    )
+    updated_detail = client.get("/api/students/ST014")
+    assert updated_detail.status_code == 200
+    academic_records = updated_detail.json()["academicRecords"]
+    assert updated_student["fullName"] == "Jane Uploaded"
+    assert any(record["score"] == 75.0 for record in academic_records)
+    expected_average = round(
+        sum(record["score"] for record in academic_records) / len(academic_records),
+        1,
+    )
+    assert updated_student["academicScore"] == expected_average
+    new_student = client.get("/api/students?search=New%20CSV%20Student")
+    assert new_student.status_code == 200
+    assert new_student.json()[0]["academicScore"] == 99.0
 
 def test_vision_endpoints(client):
     # Status

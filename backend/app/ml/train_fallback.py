@@ -20,13 +20,13 @@ What this script would train if executed:
    - on_time_submission_rate
    - vision_pose_alertness_index (with missingness flags)
 3. Algorithm:
-   - XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='multi:softprob', num_class=3)
+   - LGBMClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='multiclass', num_class=3)
 4. Target mapping:
    - 0: GREEN (Distinction / solid Pass)
    - 1: YELLOW (Borderline Pass / attendance decline)
    - 2: RED (Fail / Withdrawn / compound grade collapse)
 5. Output artifacts:
-   - backend/models/student_support_xgb_model.pkl
+   - backend/models/student_support_model.pkl
    - backend/models/student_support_features.pkl
 """
 

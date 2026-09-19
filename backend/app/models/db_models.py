@@ -124,7 +124,7 @@ class Prediction(Base):
     predicted_status = Column(String(10), nullable=False) # GREEN, YELLOW, RED
     risk_score = Column(Float, nullable=False)
     confidence_score = Column(Float, default=0.85)
-    model_version = Column(String(50), default="xgboost_oulad_v1")
+    model_version = Column(String(50), default="lightgbm_student_support_v1")
     feature_snapshot = Column(JSON, default=dict)
     quality_status = Column(String(30), default="AVAILABLE")
 

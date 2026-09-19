@@ -19,7 +19,7 @@ from ..database import SessionLocal, init_db
 from ..models.db_models import AcademicRecord, AttendanceRecord, EngagementRecord, Student
 from .feature_engineering import engineer_features_for_student
 
-logger = logging.getLogger("bytenight.ml.train_xgboost")
+logger = logging.getLogger("bytenight.ml.train_lightgbm")
 
 FEATURE_NAMES = [
     "academic_score_mean",

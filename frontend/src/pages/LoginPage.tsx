@@ -12,9 +12,23 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const emailPattern = /^[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  const passwordPattern = /^[A-Za-z0-9]+$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (!emailPattern.test(email.trim())) {
+      setErrorMessage('Enter a valid email address using letters and numbers.');
+      return;
+    }
+
+    if (!passwordPattern.test(password)) {
+      setErrorMessage('Password can contain only letters and numbers.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -29,7 +43,7 @@ export const LoginPage: React.FC = () => {
 
   const handleFillDemo = () => {
     setEmail('prof.smith@university.edu');
-    setPassword('Password123!');
+    setPassword('Password123');
     setErrorMessage(null);
   };
 
@@ -67,7 +81,7 @@ export const LoginPage: React.FC = () => {
           </div>
           <p className="font-mono text-[11px] text-slate-500">
             Email: <strong className="text-slate-700">prof.smith@university.edu</strong><br />
-            Password: <strong className="text-slate-700">Password123!</strong>
+            Password: <strong className="text-slate-700">Password123</strong>
           </p>
         </div>
 
@@ -89,7 +103,8 @@ export const LoginPage: React.FC = () => {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              pattern="[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+              onChange={(e) => setEmail(e.target.value.replace(/[^A-Za-z0-9@._%+-]/g, ''))}
               placeholder="e.g. prof.smith@university.edu"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-xs sm:text-sm bg-slate-50/50"
             />
@@ -103,7 +118,8 @@ export const LoginPage: React.FC = () => {
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              pattern="[A-Za-z0-9]+"
+              onChange={(e) => setPassword(e.target.value.replace(/[^A-Za-z0-9]/g, ''))}
               placeholder="••••••••••••"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-xs sm:text-sm bg-slate-50/50"
             />

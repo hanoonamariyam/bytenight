@@ -137,11 +137,11 @@ export const UploadCsvModal: React.FC<UploadCsvModalProps> = ({ isOpen, onClose,
             </p>
             {uploadType === 'academic' ? (
               <p className="font-mono text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200 break-all">
-                student_code, subject, assessment_type, assessment_date, score, max_score
+                student_code, name (optional), subject, assessment_type, assessment_date, score, max_score
               </p>
             ) : (
               <p className="font-mono text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200 break-all">
-                student_code, date, status, session_name
+                student_code, name (optional), date, status, session_name
               </p>
             )}
             <p className="text-[11px] text-slate-500">

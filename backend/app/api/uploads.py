@@ -11,6 +11,58 @@ from ..schemas.upload_schemas import UploadSummaryOut
 
 router = APIRouter(tags=["Uploads"])
 
+def get_or_create_student(row, student_id_or_code: str, db: Session):
+    student = db.query(Student).filter(
+        (Student.id == student_id_or_code) | (Student.student_code == student_id_or_code)
+    ).first()
+    if student:
+        return student
+
+    name = (row.get("name") or row.get("full_name") or row.get("student_name") or "").strip()
+    if not name:
+        return None
+
+    next_rank = db.query(Student).count() + 1
+    student = Student(
+        id=f"stu_upload_{uuid.uuid4().hex[:10]}",
+        student_code=student_id_or_code,
+        full_name=name,
+        email=(row.get("email") or f"{student_id_or_code.lower()}@uploaded.local").strip(),
+        class_name=(row.get("class_name") or row.get("class") or "CS-101 Sec A").strip(),
+        section=(row.get("section") or "A").strip(),
+        current_status="GREEN",
+        risk_score=0.15,
+        trend="STABLE",
+        academic_score=0.0,
+        attendance_percentage=0.0,
+        engagement_score=0.0,
+        current_rank=next_rank,
+        previous_rank=next_rank,
+        best_rank=next_rank,
+        rank_change=0,
+        data_availability={
+            "academic": "DATA_UNAVAILABLE",
+            "attendance": "DATA_UNAVAILABLE",
+            "engagement": "DATA_UNAVAILABLE",
+            "vision": "DATA_UNAVAILABLE",
+        },
+    )
+    db.add(student)
+    db.flush()
+    return student
+
+def update_academic_status(student: Student) -> None:
+    if student.academic_score >= 75:
+        student.current_status, student.risk_score = "GREEN", 0.15
+    elif student.academic_score >= 60:
+        student.current_status, student.risk_score = "YELLOW", 0.55
+    else:
+        student.current_status, student.risk_score = "RED", 0.85
+    student.data_availability = {
+        **(student.data_availability or {}),
+        "academic": "AVAILABLE",
+    }
+
 @router.post("/academic/upload", response_model=UploadSummaryOut)
 async def upload_academic_records(
     file: UploadFile = File(...),
@@ -46,13 +98,11 @@ async def upload_academic_records(
             errors.append(f"Row {idx}: missing student_id or student_code")
             continue
 
-        student = db.query(Student).filter(
-            (Student.id == stu_id_or_code) | (Student.student_code == stu_id_or_code)
-        ).first()
+        student = get_or_create_student(row, stu_id_or_code, db)
 
         if not student:
             rejected += 1
-            errors.append(f"Row {idx}: student '{stu_id_or_code}' not found")
+            errors.append(f"Row {idx}: new student '{stu_id_or_code}' requires a name")
             continue
 
         try:
@@ -63,6 +113,9 @@ async def upload_academic_records(
             subj = row.get("subject", "Data Structures")
             atype = row.get("assessment_type", "Assignment")
             adate = row.get("assessment_date", "2026-09-18")
+            uploaded_name = (row.get("name") or row.get("full_name") or row.get("student_name") or "").strip()
+            if uploaded_name:
+                student.full_name = uploaded_name
             
             grade = "A" if score_val >= 90 else "B" if score_val >= 75 else "C" if score_val >= 60 else "D" if score_val >= 50 else "F"
 
@@ -115,6 +168,7 @@ async def upload_academic_records(
             stu = db.query(Student).filter(Student.id == s_id).first()
             if stu:
                 stu.academic_score = round(avg_score, 1)
+                update_academic_status(stu)
 
     db.commit()
 
@@ -163,13 +217,11 @@ async def upload_attendance_records(
             errors.append(f"Row {idx}: missing student_id or student_code")
             continue
 
-        student = db.query(Student).filter(
-            (Student.id == stu_id_or_code) | (Student.student_code == stu_id_or_code)
-        ).first()
+        student = get_or_create_student(row, stu_id_or_code, db)
 
         if not student:
             rejected += 1
-            errors.append(f"Row {idx}: student '{stu_id_or_code}' not found")
+            errors.append(f"Row {idx}: new student '{stu_id_or_code}' requires a name")
             continue
 
         status_str = (row.get("status") or "PRESENT").upper()
@@ -179,6 +231,9 @@ async def upload_attendance_records(
         session_name = row.get("session_name", "Lecture Session")
         date_str = row.get("date", "2026-09-18")
         notes = row.get("notes")
+        uploaded_name = (row.get("name") or row.get("full_name") or row.get("student_name") or "").strip()
+        if uploaded_name:
+            student.full_name = uploaded_name
 
         db_att = AttendanceRecord(
             id=f"att_up_{uuid.uuid4().hex[:8]}",
@@ -201,6 +256,10 @@ async def upload_attendance_records(
             stu = db.query(Student).filter(Student.id == s_id).first()
             if stu:
                 stu.attendance_percentage = round(pct, 1)
+                stu.data_availability = {
+                    **(stu.data_availability or {}),
+                    "attendance": "AVAILABLE",
+                }
 
     db.commit()
 

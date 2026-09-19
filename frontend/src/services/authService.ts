@@ -41,11 +41,7 @@ class AuthService {
         this.saveSession(response.user, response.token);
         return response;
       } catch (err: any) {
-        console.warn('Live API auth error, attempting fallback...', err?.message);
-        // If live API returns explicit invalid credential error, throw it directly
-        if (err?.message && err.message.includes('Invalid email or password')) {
-          throw err;
-        }
+        throw err;
       }
     }
 
@@ -53,24 +49,9 @@ class AuthService {
     const { email, password } = credentials;
 
     // Faculty demo credentials check
-    if (email === 'prof.smith@university.edu' && password === 'Password123!') {
+    if (email === 'prof.smith@university.edu' && password === 'Password123') {
       const user = MOCK_FACULTY_USER;
       const token = 'mock_jwt_faculty_token_sarah_smith_2026';
-      this.saveSession(user, token);
-      return { user, token };
-    }
-
-    // Generic test faculty credentials
-    if (email.includes('@') && password.length >= 6) {
-      const user: User = {
-        id: 'usr_' + email.split('@')[0],
-        email: email,
-        fullName: email.split('@')[0].replace('.', ' ').toUpperCase(),
-        role: 'FACULTY',
-        department: 'Computer Science',
-        assignedClasses: ['CS-101: Data Structures (Sec A)']
-      };
-      const token = 'mock_jwt_' + user.id;
       this.saveSession(user, token);
       return { user, token };
     }

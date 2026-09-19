@@ -31,7 +31,8 @@ export const StudentRankingTable: React.FC<StudentRankingTableProps> = ({ studen
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {students.map((student) => {
+            {students.map((student, index) => {
+              const displayedRank = index + 1;
               const isVisionOffline = student.dataAvailability.vision === 'DATA_UNAVAILABLE';
 
               return (
@@ -43,16 +44,16 @@ export const StudentRankingTable: React.FC<StudentRankingTableProps> = ({ studen
                   <td className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span
                       className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${
-                        student.currentRank === 1
+                        displayedRank === 1
                           ? 'bg-amber-100 text-amber-900 border border-amber-300 font-black'
-                          : student.currentRank === 2
+                          : displayedRank === 2
                           ? 'bg-slate-200 text-slate-800 border border-slate-300 font-extrabold'
-                          : student.currentRank === 3
+                          : displayedRank === 3
                           ? 'bg-amber-50 text-amber-800 border border-amber-200 font-bold'
                           : 'bg-slate-100 text-slate-700 font-medium'
                       }`}
                     >
-                      {student.currentRank}
+                      {displayedRank}
                     </span>
                   </td>
 

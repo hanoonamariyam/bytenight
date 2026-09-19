@@ -26,11 +26,11 @@ This document specifies the complete technical architecture, data pipelines, API
 | **Data Visualization** | Recharts | 2.12+ | Declarative React charting library for academic performance trends, attendance, and SHAP feature impact. |
 | **State & Data Fetching** | TanStack Query (React Query) | 5.x | Automatic caching, background refetching, and declarative loading/error/empty state management. |
 | **Backend Framework** | FastAPI (Python) | 0.110+ | High-performance asynchronous REST framework with native Pydantic v2 schemas and automatic OpenAPI docs. |
-| **Language (Backend)** | Python | 3.11+ | First-class ecosystem for data science, ML (Scikit-Learn/XGBoost), and Computer Vision (OpenCV/MediaPipe). |
+| **Language (Backend)** | Python | 3.11+ | First-class ecosystem for data science, ML (Scikit-Learn/LightGBM), and Computer Vision (OpenCV/MediaPipe). |
 | **ORM & Database Client** | SQLAlchemy + asyncpg / psycopg2 | 2.0+ | Modern type-safe ORM supporting PostgreSQL in production and SQLite for instant offline local development. |
 | **Database** | PostgreSQL | 15+ / 16+ | Robust relational database for ACID transactions, JSONB querying, and structured historical tracking (Neon/Supabase/Render). |
 | **Authentication** | OAuth2 Bearer + JWT (`pyjwt` / `python-jose`) + `passlib[bcrypt]` | Latest | Stateless token authentication with role-based claims (`ADMIN`, `FACULTY`, `STUDENT`). |
-| **Machine Learning** | Scikit-learn + XGBoost / LightGBM | 1.4+ / 2.0+ | Fast tabular model training and sub-millisecond inference with battle-tested classification reliability. |
+| **Machine Learning** | Scikit-learn + LightGBM | 1.4+ / 4.0+ | Fast tabular model training and sub-millisecond inference with battle-tested classification reliability. |
 | **Explainability Engine**| SHAP (SHapley Additive exPlanations) | 0.44+ | Industry gold standard for local feature attribution (`TreeExplainer` for tree models). |
 | **Computer Vision** | OpenCV (Headless) + MediaPipe | 4.9+ / 0.10+ | Lightweight frame analysis for face mesh, gaze/head pose estimation, and presence detection without GPU requirements. |
 | **Containerization & CI**| Docker + GitHub Actions | Latest | Multi-stage Docker builds and automated lint/test validation. |

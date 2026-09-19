@@ -560,7 +560,7 @@ The AI architecture is defined at PRD level only. It will be designed and implem
 
 The future ML system should use structured data to predict academic risk or support need. Potential models include:
 
-- XGBoost
+- LightGBM
 - LightGBM
 
 Inputs may include:

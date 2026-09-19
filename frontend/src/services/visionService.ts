@@ -60,16 +60,12 @@ class VisionService {
   // Corresponds to POST /api/vision/analyze
   async analyzeVideo(file: File): Promise<VisionAnalyzeResponse> {
     if (!USE_MOCK_API) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        return await apiRequest<VisionAnalyzeResponse>('/vision/analyze', {
-          method: 'POST',
-          body: formData,
-        });
-      } catch (err) {
-        console.warn('Live API error analyzing video, using safe fallback:', err);
-      }
+      const formData = new FormData();
+      formData.append('file', file);
+      return await apiRequest<VisionAnalyzeResponse>('/vision/analyze', {
+        method: 'POST',
+        body: formData,
+      });
     }
 
     await simulateLatency(800);

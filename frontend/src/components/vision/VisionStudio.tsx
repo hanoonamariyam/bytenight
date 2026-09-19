@@ -70,6 +70,21 @@ export const VisionStudio: React.FC = () => {
   };
 
   const validateFile = (file: File): boolean => {
+    if (!file || file.size === 0) {
+      setErrorMessage(
+        'Selected video file is empty (0 bytes). Please select a valid classroom video recording.'
+      );
+      return false;
+    }
+
+    const MAX_SIZE_BYTES = 150 * 1024 * 1024; // 150 MB limit
+    if (file.size > MAX_SIZE_BYTES) {
+      setErrorMessage(
+        `Video file size (${formatFileSize(file.size)}) exceeds the maximum allowed limit of 150 MB.`
+      );
+      return false;
+    }
+
     const fileNameLower = file.name.toLowerCase();
     const hasValidExt = SUPPORTED_EXTENSIONS.some(ext => fileNameLower.endsWith(ext));
     const hasValidMime = file.type ? SUPPORTED_MIME_TYPES.includes(file.type) || file.type.startsWith('video/') : true;
@@ -163,6 +178,10 @@ export const VisionStudio: React.FC = () => {
 
   const handleAnalyzeVideo = async () => {
     if (!selectedFile) return;
+    if (selectedFile.size === 0) {
+      setErrorMessage('Selected video file is empty (0 bytes). Please choose a valid video.');
+      return;
+    }
     setAnalysisStatus('ANALYZING');
     setErrorMessage(null);
     try {
@@ -170,7 +189,14 @@ export const VisionStudio: React.FC = () => {
       setAnalysisResult(res);
       setAnalysisStatus('COMPLETED');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Video analysis failed.');
+      const msg = err?.message || 'Video analysis failed.';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+        setErrorMessage(
+          'Unable to connect to FastAPI backend at http://127.0.0.1:8000. Please ensure the backend server is running.'
+        );
+      } else {
+        setErrorMessage(msg);
+      }
       setAnalysisStatus('IDLE');
     }
   };
@@ -462,7 +488,7 @@ export const VisionStudio: React.FC = () => {
                 <div className="pt-2 border-t border-slate-100">
                   <span className="text-slate-500 block text-[11px]">Target Endpoint:</span>
                   <span className="font-mono text-[11px] text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 block mt-1 truncate">
-                    POST /api/v1/vision/analyze
+                    POST /api/vision/analyze
                   </span>
                 </div>
               </div>
@@ -563,7 +589,13 @@ export const VisionStudio: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                analysisResult.confidence >= 0.7
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                  : analysisResult.confidence >= 0.5
+                  ? 'bg-amber-100 text-amber-800 border-amber-200'
+                  : 'bg-slate-100 text-slate-700 border-slate-200'
+              }`}>
                 Confidence: {(analysisResult.confidence * 100).toFixed(0)}%
               </span>
               <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
@@ -572,6 +604,32 @@ export const VisionStudio: React.FC = () => {
             </div>
           </div>
 
+          {/* Auxiliary Signal & Fairness Guarantee Banner (Task 8 & 7) */}
+          <div className="p-3.5 bg-sky-50/80 border border-sky-200 rounded-xl flex items-start gap-3 text-xs text-sky-950">
+            <ShieldCheck size={18} className="text-sky-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <h5 className="font-bold text-xs text-sky-950">
+                Auxiliary Engagement Signal Only • Non-Punitive Guarantee
+              </h5>
+              <p className="text-sky-800 leading-relaxed text-[11px]">
+                Classroom vision signals serve strictly as auxiliary indicators. Under model fairness guidelines, optical telemetry must <strong>NOT</strong> independently classify any student as RED or at-risk. Unmapped seating zones or insufficient camera confidence are evaluated neutrally with zero negative penalty.
+              </p>
+            </div>
+          </div>
+
+          {/* Low Confidence Global Warning (Task 7) */}
+          {(analysisResult.confidence < 0.50 || analysisResult.data_quality === 'LOW_CONFIDENCE' || analysisResult.data_quality === 'DATA_UNAVAILABLE') && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+              <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Vision data unavailable — insufficient detection confidence.</p>
+                <p className="text-amber-800 mt-0.5 text-[11px]">
+                  Optical metrics do not meet confidence thresholds. Missing detection is evaluated neutrally and never treated as negative behavior.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Aggregate Telemetry Breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 text-center">
@@ -579,11 +637,11 @@ export const VisionStudio: React.FC = () => {
               <span className="text-xl font-bold text-emerald-900 mt-1 block">{analysisResult.behaviour_summary.attentive}</span>
             </div>
             <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-center">
-              <span className="text-[11px] font-semibold text-blue-800 uppercase tracking-wider block">Talking</span>
+              <span className="text-[11px] font-semibold text-blue-800 uppercase tracking-wider block">Talking (Proxy)</span>
               <span className="text-xl font-bold text-blue-900 mt-1 block">{analysisResult.behaviour_summary.talking}</span>
             </div>
             <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 text-center">
-              <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">Phone Usage</span>
+              <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">Phone Usage (Proxy)</span>
               <span className="text-xl font-bold text-amber-900 mt-1 block">{analysisResult.behaviour_summary.phone_usage}</span>
             </div>
             <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3 text-center">
@@ -603,36 +661,116 @@ export const VisionStudio: React.FC = () => {
                 <tr>
                   <th className="py-2.5 px-3">Seating Zone / Desk</th>
                   <th className="py-2.5 px-3">Anonymous Identifier</th>
-                  <th className="py-2.5 px-3">Classified Telemetry</th>
+                  <th className="py-2.5 px-3">Classified Telemetry (Pose Proxies)</th>
                   <th className="py-2.5 px-3">Confidence</th>
-                  <th className="py-2.5 px-3">Optical Indicators</th>
+                  <th className="py-2.5 px-3">Optical Indicators &amp; Context</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {analysisResult.students.map((st, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-800">{st.desk_label || `Zone ${idx + 1}`}</td>
-                    <td className="py-2.5 px-3 font-mono text-slate-500">{st.student_id}</td>
-                    <td className="py-2.5 px-3">
-                      <span className={`px-2 py-0.5 rounded font-semibold text-[11px] ${
-                        st.behaviour === 'ATTENTIVE' ? 'bg-emerald-100 text-emerald-800' :
-                        st.behaviour === 'TALKING' ? 'bg-blue-100 text-blue-800' :
-                        st.behaviour === 'PHONE_USAGE' ? 'bg-amber-100 text-amber-800' :
-                        st.behaviour === 'SLEEPING' ? 'bg-rose-100 text-rose-800' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>
-                        {st.behaviour}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-700">{(st.confidence * 100).toFixed(0)}%</td>
-                    <td className="py-2.5 px-3 text-slate-600">
-                      {st.indicators.length > 0 ? st.indicators.join('; ') : 'Normal active pose'}
-                    </td>
-                  </tr>
-                ))}
+                {analysisResult.students.map((st, idx) => {
+                  const isInsufficientConfidence = st.confidence < 0.50 || st.behaviour === 'UNKNOWN';
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50/60">
+                      <td className="py-2.5 px-3 font-semibold text-slate-800">{st.desk_label || `Zone ${idx + 1}`}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-500">{st.student_id}</td>
+                      <td className="py-2.5 px-3">
+                        {isInsufficientConfidence ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
+                            UNKNOWN (Neutral)
+                          </span>
+                        ) : st.behaviour === 'ATTENTIVE' ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            ATTENTIVE
+                          </span>
+                        ) : st.behaviour === 'TALKING' ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-blue-100 text-blue-800 border border-blue-200">
+                            TALKING (Pose Proxy)
+                          </span>
+                        ) : st.behaviour === 'PHONE_USAGE' ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-amber-100 text-amber-800 border border-amber-200">
+                            PHONE USAGE (Pose Proxy)
+                          </span>
+                        ) : st.behaviour === 'SLEEPING' ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-rose-100 text-rose-800 border border-rose-200">
+                            SLEEPING (Head Slump)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-slate-100 text-slate-600">
+                            {st.behaviour}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-slate-700">
+                        {(st.confidence * 100).toFixed(0)}%
+                        {isInsufficientConfidence && (
+                          <span className="ml-1 text-[10px] text-slate-400 font-sans">(Low)</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">
+                        {isInsufficientConfidence ? (
+                          <div className="space-y-0.5">
+                            <span className="text-slate-700 font-medium block">
+                              Vision data unavailable — insufficient detection confidence.
+                            </span>
+                            <span className="text-[11px] text-slate-500 block">
+                              Auxiliary signal only — not treated as negative behavior.
+                            </span>
+                          </div>
+                        ) : st.behaviour === 'TALKING' ? (
+                          <div className="space-y-0.5">
+                            <span className="block">
+                              {st.indicators.length > 0 ? st.indicators.join('; ') : 'Lateral head orientation observed towards adjacent seat'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 italic block">
+                              Visual orientation proxy only; does not prove conversational speech.
+                            </span>
+                          </div>
+                        ) : st.behaviour === 'PHONE_USAGE' ? (
+                          <div className="space-y-0.5">
+                            <span className="block">
+                              {st.indicators.length > 0 ? st.indicators.join('; ') : 'Hand proximity to desk with downward gaze angle'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 italic block">
+                              Pose geometry proxy only; does not prove active device interaction.
+                            </span>
+                          </div>
+                        ) : (
+                          <span>{st.indicators.length > 0 ? st.indicators.join('; ') : 'Normal active classroom posture'}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+
+          {/* Table Footer Disclaimers (Task 9 & 8) */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span>
+              * Pose detection measures joint orientation proxies and does not prove talking or phone usage.
+            </span>
+            <span className="font-medium text-slate-600">
+              Missing detection is treated neutrally and never penalized as negative behavior.
+            </span>
+          </div>
+
+          {/* Pipeline Warnings & Operational Notes (Task 8) */}
+          {analysisResult.processing_warnings && analysisResult.processing_warnings.length > 0 && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
+              <span className="font-bold text-[11px] uppercase tracking-wider text-slate-600 block">
+                Pipeline Operational Notes &amp; Guarantees:
+              </span>
+              <ul className="space-y-0.5">
+                {analysisResult.processing_warnings.map((warn, wIdx) => (
+                  <li key={wIdx} className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                    <span>{warn}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

@@ -580,7 +580,7 @@ def seed_database():
                 predicted_status=s["current_status"],
                 risk_score=s["risk_score"],
                 confidence_score=0.89,
-                model_version="xgboost_oulad_baseline_v1",
+                model_version="lightgbm_student_support_v1",
                 feature_snapshot={
                     "academic_score": s["academic_score"],
                     "attendance_percentage": s["attendance_percentage"],
