@@ -4,6 +4,8 @@ from .student_schemas import ContributingFactorOut
 
 class PredictionRequest(BaseModel):
     studentId: str
+    academicYear: Optional[str] = None
+    semester: Optional[str] = None
 
 class PredictionOut(BaseModel):
     predictionId: str

@@ -38,6 +38,8 @@ class StudentOut(StudentBase):
 
 class AcademicRecordOut(BaseModel):
     id: str
+    academicYear: Optional[str] = None
+    semester: Optional[str] = None
     subject: str
     assessmentType: str
     assessmentDate: str

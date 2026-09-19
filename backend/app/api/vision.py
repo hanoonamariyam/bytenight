@@ -53,21 +53,21 @@ async def analyze_video(
             desk_label="Row 2, Seat 1",
             behaviour="TALKING",
             confidence=0.82,
-            indicators=["Lateral head orientation observed towards adjacent seat"]
+            indicators=["Lateral head orientation observed towards adjacent seat (visual proxy indicator, non-definitive speech)"]
         ),
         DetectedStudentBehavior(
             student_id="person_zone_r2_s2",
             desk_label="Row 2, Seat 2",
             behaviour="PHONE_USAGE",
             confidence=0.84,
-            indicators=["Hand proximity to desk with downward gaze angle"]
+            indicators=["Hand proximity to desk with downward gaze angle (pose proxy indicator)"]
         ),
         DetectedStudentBehavior(
             student_id="person_zone_r3_s1",
             desk_label="Row 3, Seat 1",
             behaviour="UNKNOWN",
             confidence=0.45,
-            indicators=["Partial occlusion by lecture podium; low confidence"]
+            indicators=["Vision data unavailable — insufficient detection confidence. Not treated as negative behavior."]
         )
     ]
 
@@ -109,7 +109,8 @@ async def analyze_video(
         students=detected_students,
         processing_warnings=[
             "Vision data serves exclusively as auxiliary engagement context.",
-            "Missing or unmapped seats are never penalized in academic risk scoring."
+            "Missing or unmapped seats are never penalized in academic risk scoring.",
+            "Vision signals must NOT independently classify any student as RED or at-risk."
         ]
     )
 

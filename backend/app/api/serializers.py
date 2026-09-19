@@ -45,6 +45,8 @@ def format_student(student: Student) -> StudentOut:
 def format_academic_record(record: AcademicRecord) -> AcademicRecordOut:
     return AcademicRecordOut(
         id=record.id,
+        academicYear=record.academic_year,
+        semester=record.semester,
         subject=record.subject,
         assessmentType=record.assessment_type,
         assessmentDate=record.assessment_date,

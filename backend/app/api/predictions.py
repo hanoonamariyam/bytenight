@@ -34,9 +34,26 @@ def run_prediction(request: PredictionRequest, db: Session = Depends(get_db)):
             detail=f"Student '{request.studentId}' not found"
         )
 
-    academic_records = db.query(AcademicRecord).filter(
+    academic_query = db.query(AcademicRecord).filter(
         AcademicRecord.student_id == student.id
-    ).all()
+    )
+    requested_semester = request.semester
+    requested_year = request.academicYear
+    if requested_semester == "current":
+        latest = academic_query.filter(
+            AcademicRecord.academic_year.isnot(None),
+            AcademicRecord.semester.isnot(None),
+        ).order_by(AcademicRecord.assessment_date.desc()).first()
+        if latest:
+            requested_year = requested_year or latest.academic_year
+            requested_semester = latest.semester
+        else:
+            requested_semester = "__no_current_semester__"
+    if requested_year is not None:
+        academic_query = academic_query.filter(AcademicRecord.academic_year == requested_year)
+    if requested_semester is not None:
+        academic_query = academic_query.filter(AcademicRecord.semester == requested_semester)
+    academic_records = academic_query.all()
     attendance_records = db.query(AttendanceRecord).filter(
         AttendanceRecord.student_id == student.id
     ).all()

@@ -42,6 +42,29 @@ def generate_rank_history(student: Student) -> List[RankHistoryEntryOut]:
         RankHistoryEntryOut(term="Week 8 (Midterm)", date="2026-09-14", rank=curr_rank, score=round(score, 1))
     ]
 
+def academic_query(
+    db: Session,
+    student_id: str,
+    academic_year: Optional[str] = None,
+    semester: Optional[str] = None,
+):
+    query = db.query(AcademicRecord).filter(AcademicRecord.student_id == student_id)
+    if semester == "current":
+        latest = query.filter(
+            AcademicRecord.academic_year.isnot(None),
+            AcademicRecord.semester.isnot(None),
+        ).order_by(AcademicRecord.assessment_date.desc()).first()
+        if latest:
+            academic_year = academic_year or latest.academic_year
+            semester = latest.semester
+        else:
+            return query.filter(AcademicRecord.id == "__no_current_semester__")
+    if academic_year is not None:
+        query = query.filter(AcademicRecord.academic_year == academic_year)
+    if semester is not None:
+        query = query.filter(AcademicRecord.semester == semester)
+    return query
+
 @router.get("", response_model=List[StudentOut])
 @router.get("/", response_model=List[StudentOut])
 def get_students(
@@ -91,11 +114,16 @@ def get_students(
     return [format_student(s) for s in result]
 
 @router.get("/{student_id}", response_model=StudentDetailOut)
-def get_student_detail(student_id: str, db: Session = Depends(get_db)):
+def get_student_detail(
+    student_id: str,
+    academic_year: Optional[str] = Query(None, alias="academic_year"),
+    semester: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     student = find_student(student_id, db)
     
-    academic_records = db.query(AcademicRecord).filter(
-        AcademicRecord.student_id == student.id
+    academic_records = academic_query(
+        db, student.id, academic_year, semester
     ).order_by(AcademicRecord.assessment_date.asc()).all()
 
     attendance_records = db.query(AttendanceRecord).filter(
@@ -134,10 +162,15 @@ def get_student_detail(student_id: str, db: Session = Depends(get_db)):
     )
 
 @router.get("/{student_id}/academic", response_model=List[AcademicRecordOut])
-def get_student_academic(student_id: str, db: Session = Depends(get_db)):
+def get_student_academic(
+    student_id: str,
+    academic_year: Optional[str] = Query(None, alias="academic_year"),
+    semester: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     student = find_student(student_id, db)
-    records = db.query(AcademicRecord).filter(
-        AcademicRecord.student_id == student.id
+    records = academic_query(
+        db, student.id, academic_year, semester
     ).order_by(AcademicRecord.assessment_date.asc()).all()
     return [format_academic_record(r) for r in records]
 

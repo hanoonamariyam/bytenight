@@ -1,7 +1,5 @@
-import os
 import logging
-from pathlib import Path
-from typing import Optional, List, Any, Tuple
+from typing import Optional, List, Any
 import joblib
 
 from ..config import settings
@@ -34,10 +32,17 @@ class ModelLoader:
         model_path = settings.MODEL_PATH
         features_path = settings.FEATURES_PATH
 
-        if not model_path.exists():
+        if not model_path.exists() or not features_path.exists():
+            missing = []
+            if not model_path.exists():
+                missing.append(str(model_path))
+            if not features_path.exists():
+                missing.append(str(features_path))
             self.is_loaded = False
-            self.load_status = "FILE_NOT_FOUND"
-            self.load_error = f"Expected model file not found at {model_path}. Fallback prediction engine active."
+            self.model = None
+            self.feature_names = None
+            self.load_status = "ARTIFACTS_MISSING"
+            self.load_error = f"Required model artifacts not found: {', '.join(missing)}. Fallback prediction engine active."
             logger.warning(self.load_error)
             return False
 
@@ -45,16 +50,15 @@ class ModelLoader:
             logger.info(f"Loading trained XGBoost model from {model_path}...")
             self.model = joblib.load(model_path)
             
-            if features_path.exists():
-                logger.info(f"Loading feature schema from {features_path}...")
-                self.feature_names = joblib.load(features_path)
-            else:
-                # Try reading feature names directly from model if available
-                if hasattr(self.model, "feature_names_in_"):
-                    self.feature_names = list(self.model.feature_names_in_)
-                else:
-                    self.feature_names = None
-                    logger.warning(f"Features file not found at {features_path}; feature order unverified.")
+            logger.info(f"Loading feature schema from {features_path}...")
+            self.feature_names = joblib.load(features_path)
+            if not isinstance(self.feature_names, list) or not self.feature_names:
+                raise ValueError("Feature artifact must contain a non-empty list")
+            if not hasattr(self.model, "predict_proba"):
+                raise ValueError("Model artifact does not expose predict_proba")
+            classes = list(getattr(self.model, "classes_", []))
+            if classes != [0, 1, 2]:
+                raise ValueError(f"Model classes must be [0, 1, 2], found {classes}")
 
             self.is_loaded = True
             self.load_status = "LOADED"
@@ -63,6 +67,8 @@ class ModelLoader:
             return True
         except Exception as e:
             self.is_loaded = False
+            self.model = None
+            self.feature_names = None
             self.load_status = "LOAD_ERROR"
             self.load_error = f"Failed to deserialize model: {str(e)}"
             logger.error(self.load_error)

@@ -58,34 +58,58 @@ async def upload_academic_records(
         try:
             score_val = float(row.get("score", 0.0))
             max_score = float(row.get("max_score", 100.0))
+            academic_year = (row.get("academic_year") or row.get("academicYear") or "").strip() or None
+            semester = (row.get("semester") or "").strip() or None
             subj = row.get("subject", "Data Structures")
             atype = row.get("assessment_type", "Assignment")
             adate = row.get("assessment_date", "2026-09-18")
             
             grade = "A" if score_val >= 90 else "B" if score_val >= 75 else "C" if score_val >= 60 else "D" if score_val >= 50 else "F"
-            
-            db_record = AcademicRecord(
-                id=f"ar_up_{uuid.uuid4().hex[:8]}",
-                student_id=student.id,
-                subject=subj,
-                assessment_type=atype,
-                assessment_date=adate,
-                score=score_val,
-                max_score=max_score,
-                grade_label=grade,
-                class_average=75.0,
-                status="AVAILABLE"
-            )
-            db.add(db_record)
+
+            identity_filters = [
+                AcademicRecord.student_id == student.id,
+                AcademicRecord.academic_year == academic_year,
+                AcademicRecord.semester == semester,
+                AcademicRecord.subject == subj,
+                AcademicRecord.assessment_type == atype,
+                AcademicRecord.assessment_date == adate,
+            ]
+            db_record = db.query(AcademicRecord).filter(*identity_filters).first()
+            if db_record:
+                db_record.score = score_val
+                db_record.max_score = max_score
+                db_record.grade_label = grade
+                db_record.status = "AVAILABLE"
+            else:
+                db.add(AcademicRecord(
+                    id=f"ar_up_{uuid.uuid4().hex[:8]}",
+                    student_id=student.id,
+                    academic_year=academic_year,
+                    semester=semester,
+                    subject=subj,
+                    assessment_type=atype,
+                    assessment_date=adate,
+                    score=score_val,
+                    max_score=max_score,
+                    grade_label=grade,
+                    class_average=75.0,
+                    status="AVAILABLE"
+                ))
             accepted += 1
-            affected_students.add(student.id)
+            affected_students.add((student.id, academic_year, semester))
         except (ValueError, TypeError) as e:
             rejected += 1
             errors.append(f"Row {idx}: invalid score format '{row.get('score')}'")
 
     # Update averages for affected students
-    for s_id in affected_students:
-        records = db.query(AcademicRecord).filter(AcademicRecord.student_id == s_id).all()
+    for s_id, academic_year, semester in affected_students:
+        query = db.query(AcademicRecord).filter(AcademicRecord.student_id == s_id)
+        if academic_year and semester:
+            query = query.filter(
+                AcademicRecord.academic_year == academic_year,
+                AcademicRecord.semester == semester,
+            )
+        records = query.all()
         if records:
             avg_score = sum(r.score for r in records) / len(records)
             stu = db.query(Student).filter(Student.id == s_id).first()
@@ -101,7 +125,7 @@ async def upload_academic_records(
         missingDataRows=missing,
         updatedStudents=len(affected_students),
         errors=errors[:10],
-        message=f"Successfully imported {accepted} academic records across {len(affected_students)} students."
+        message=f"Successfully imported {accepted} academic records across {len({s_id for s_id, _, _ in affected_students})} students."
     )
 
 @router.post("/attendance/upload", response_model=UploadSummaryOut)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON, Index
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -59,9 +59,23 @@ class Student(Base):
 
 class AcademicRecord(Base):
     __tablename__ = "academic_records"
+    __table_args__ = (
+        Index(
+            "uq_academic_record_identity",
+            "student_id",
+            "academic_year",
+            "semester",
+            "subject",
+            "assessment_type",
+            "assessment_date",
+            unique=True,
+        ),
+    )
 
     id = Column(String(50), primary_key=True, index=True)
     student_id = Column(String(50), ForeignKey("students.id"), nullable=False, index=True)
+    academic_year = Column(String(20), nullable=True, index=True)
+    semester = Column(String(30), nullable=True, index=True)
     subject = Column(String(100), default="Data Structures")
     assessment_type = Column(String(50), nullable=False) # Quiz 1, Midterm, Lab 1, etc.
     assessment_date = Column(String(30), nullable=False)

@@ -64,7 +64,7 @@ def predict_student_risk(features: Dict[str, Any]) -> Dict[str, Any]:
                 risk_score = 0.85 if predicted_status == "RED" else 0.55 if predicted_status == "YELLOW" else 0.15
                 confidence = 0.88
 
-            model_version = "xgb_oulad_trained"
+            model_version = "xgboost_student_support_trained"
             return {
                 "predicted_status": predicted_status,
                 "risk_score": round(min(1.0, max(0.0, risk_score)), 3),

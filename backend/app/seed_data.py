@@ -17,17 +17,8 @@ def seed_database():
         # Check if already seeded
         existing_user = db.query(User).filter(User.email == "prof.smith@university.edu").first()
         if existing_user:
-            print("Database already contains demo user. Resetting demo data...")
-            db.query(PredictionFactor).delete()
-            db.query(Prediction).delete()
-            db.query(Alert).delete()
-            db.query(StatusHistory).delete()
-            db.query(AcademicRecord).delete()
-            db.query(AttendanceRecord).delete()
-            db.query(EngagementRecord).delete()
-            db.query(Student).delete()
-            db.query(User).delete()
-            db.commit()
+            print("Database already contains demo data. Preserving existing records.")
+            return
 
         # 1. Create Demo Faculty User
         faculty = User(
